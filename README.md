@@ -14,7 +14,7 @@
 
 ## 使い方
 
-### Docker Hub から実行
+### GitHub Container Registry から実行
 
 ```bash
 # デフォルトポート（9876）で実行
