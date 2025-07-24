@@ -1,0 +1,17 @@
+# Git files
+.git
+.gitignore
+
+# GitHub files
+.github/
+
+# Documentation
+README.md
+CLAUDE.md
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
