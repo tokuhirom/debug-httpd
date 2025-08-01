@@ -114,6 +114,33 @@ GitHub Actions により：
 - プルリクエスト時にテストとビルドを実行
 - main ブランチへのプッシュ時に Docker イメージをビルドし、GitHub Container Registry (ghcr.io) にプッシュ
 
+## リリース
+
+### バージョニング
+
+セマンティックバージョニング（例: v1.0.0）を使用します。
+
+### リリース方法
+
+```bash
+# タグを作成してプッシュ
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+タグをプッシュすると自動的に：
+1. テスト（ユニット + 統合）を実行
+2. マルチプラットフォーム向けバイナリをビルド
+3. Docker イメージをビルドして ghcr.io にプッシュ
+4. GitHub Release を作成
+
+### 利用可能なDockerタグ
+
+- `ghcr.io/tokuhirom/debug-httpd:latest` - 最新版
+- `ghcr.io/tokuhirom/debug-httpd:v1.0.0` - 特定バージョン
+- `ghcr.io/tokuhirom/debug-httpd:1.0` - マイナーバージョン
+- `ghcr.io/tokuhirom/debug-httpd:1` - メジャーバージョン
+
 ## ライセンス
 
 ```

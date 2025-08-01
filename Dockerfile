@@ -1,6 +1,9 @@
 # Build stage
 FROM golang:1.21-alpine AS builder
 
+# Build argument for version
+ARG VERSION=dev
+
 WORKDIR /build
 
 # Copy go mod files if they exist
@@ -9,8 +12,8 @@ COPY go.* ./
 # Copy source code
 COPY main.go .
 
-# Build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o debug-httpd main.go
+# Build the binary with version
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s -X main.Version=${VERSION}" -o debug-httpd main.go
 
 # Final stage
 FROM scratch

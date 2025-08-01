@@ -72,9 +72,27 @@ curl http://localhost:9876/logs
 
 ## Deployment
 
-The image is automatically built and pushed to GitHub Container Registry (ghcr.io) when changes are pushed to the main branch. The workflow is defined in `.github/workflows/docker-publish.yml`.
+### Continuous Integration
+The CI workflow (`.github/workflows/docker-publish.yml`) runs on every push and PR to ensure code quality.
 
-To pull the published image:
+### Releases
+Releases are automated through the release workflow (`.github/workflows/release.yml`):
+
+1. Create a version tag: `git tag v1.0.0`
+2. Push the tag: `git push origin v1.0.0`
+3. GitHub Actions will automatically:
+   - Run all tests
+   - Build multi-platform binaries
+   - Build and push Docker images with semantic version tags
+   - Create a GitHub Release
+
+### Docker Images
 ```bash
+# Latest stable version
 docker pull ghcr.io/tokuhirom/debug-httpd:latest
+
+# Specific version
+docker pull ghcr.io/tokuhirom/debug-httpd:v1.0.0
 ```
+
+See `RELEASE.md` for detailed release process.

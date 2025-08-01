@@ -14,6 +14,9 @@ import (
 	"time"
 )
 
+// Version is set at build time
+var Version = "dev"
+
 // AccessLog represents a single access log entry
 type AccessLog struct {
 	Timestamp     string `json:"timestamp"`
@@ -163,6 +166,7 @@ func debugHandler(w http.ResponseWriter, r *http.Request) {
 		},
 		"environment_variables": envVars,
 		"go_version":           runtime.Version(),
+		"app_version":          Version,
 	}
 	
 	w.Header().Set("Content-Type", "application/json")
@@ -173,8 +177,16 @@ func debugHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	// Parse command line arguments
 	var port int
+	var showVersion bool
 	flag.IntVar(&port, "port", 0, "Port to listen on")
+	flag.BoolVar(&showVersion, "version", false, "Show version")
 	flag.Parse()
+	
+	// Show version if requested
+	if showVersion {
+		fmt.Printf("debug-httpd %s (built with %s)\n", Version, runtime.Version())
+		os.Exit(0)
+	}
 	
 	// If port not specified via flag, check environment variable
 	if port == 0 {
