@@ -9,6 +9,15 @@ from datetime import datetime
 
 class DebugHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
+        # Handle /ping endpoint
+        if self.path == '/ping':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b'pong')
+            return
+        
+        # Default handler for all other paths
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
