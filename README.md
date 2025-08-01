@@ -100,10 +100,7 @@ make run
 ```
 
 ### Dockerイメージサイズ
-- Go版: 約6.5MB (scratchベース)
-- 旧Python版: 約221MB
-
-**約97%のサイズ削減を実現！**
+約6.5MB (scratchベース) の超軽量イメージ
 
 ## CI/CD
 
