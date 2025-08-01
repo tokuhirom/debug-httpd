@@ -4,11 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a debug HTTP server project that creates a Docker container for debugging purposes. The server displays:
+This is a lightweight debug HTTP server project written in Go. It creates a minimal Docker container (≈6.5MB) for debugging purposes. The server provides:
 - Environment variables
 - Host information (hostname, FQDN, IP addresses)
 - Request details (headers, client info)
-- Python version
+- Go version
+- Access logging (last 100 requests)
+- Health check endpoint
 
 ## Common Commands
 
@@ -29,16 +31,37 @@ docker run -p 8080:8080 debug-httpd:latest 8080
 docker run -p 9000:9000 -e PORT=9000 debug-httpd:latest
 ```
 
-### Test the Server
+### Build and Test Locally
 ```bash
+# Run tests
+make test
+
+# Build binary
+make build
+
+# Run locally
+make run
+```
+
+### Test Endpoints
+```bash
+# Get debug info
 curl http://localhost:9876
+
+# Health check
+curl http://localhost:9876/ping
+
+# Get access logs
+curl http://localhost:9876/logs
 ```
 
 ## Architecture
 
-- **Dockerfile**: Multi-stage build creating a Python-based HTTP server
-- **server.py**: Embedded in Dockerfile, creates a JSON API endpoint that returns debug information
-- **GitHub Actions**: Automated build and push to ghcr.io on main branch commits
+- **main.go**: Go HTTP server with /ping, /logs, and debug endpoints
+- **main_test.go**: Comprehensive unit tests
+- **Dockerfile**: Multi-stage build creating minimal scratch-based container (≈6.5MB)
+- **Makefile**: Build, test, and run targets
+- **GitHub Actions**: Automated testing, build, and push to ghcr.io on main branch commits
 
 ## Deployment
 
