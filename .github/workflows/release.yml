@@ -1,0 +1,127 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Run unit tests
+        run: go test -v ./...
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Run integration tests
+        run: make integration-test
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build binaries
+        run: |
+          # Build for multiple platforms
+          GOOS=linux GOARCH=amd64 go build -ldflags="-w -s -X main.Version=${{ steps.version.outputs.VERSION }}" -o debug-httpd-linux-amd64 main.go
+          GOOS=linux GOARCH=arm64 go build -ldflags="-w -s -X main.Version=${{ steps.version.outputs.VERSION }}" -o debug-httpd-linux-arm64 main.go
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-w -s -X main.Version=${{ steps.version.outputs.VERSION }}" -o debug-httpd-darwin-amd64 main.go
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-w -s -X main.Version=${{ steps.version.outputs.VERSION }}" -o debug-httpd-darwin-arm64 main.go
+          GOOS=windows GOARCH=amd64 go build -ldflags="-w -s -X main.Version=${{ steps.version.outputs.VERSION }}" -o debug-httpd-windows-amd64.exe main.go
+
+      - name: Create checksums
+        run: |
+          sha256sum debug-httpd-* > checksums.txt
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.VERSION }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.VERSION, '-') }}
+          files: |
+            debug-httpd-*
+            checksums.txt
+          body: |
+            ## Docker Images
+            
+            ```bash
+            # Latest version
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
+            
+            # Always latest
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ```
+            
+            ## Binary Downloads
+            
+            See the assets below for pre-built binaries for various platforms.
+            
+            ### Verify checksums
+            ```bash
+            sha256sum -c checksums.txt
+            ```
