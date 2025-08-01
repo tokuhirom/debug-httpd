@@ -89,8 +89,14 @@ curl -s http://localhost:9876 | jq .
 
 ### ローカルでのビルド
 ```bash
-# テストを実行
+# ユニットテストを実行
 make test
+
+# 統合テスト（Dockerが必要）を実行
+make integration-test
+
+# 全てのテストを実行
+make test-all
 
 # バイナリをビルド
 make build

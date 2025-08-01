@@ -1,11 +1,18 @@
-.PHONY: test build run docker-build docker-run clean
+.PHONY: test build run docker-build docker-run clean integration-test
 
 # Default target
 all: test build
 
-# Run tests
+# Run unit tests
 test:
 	go test -v ./...
+
+# Run integration tests (requires Docker)
+integration-test:
+	go test -v -tags=integration -timeout=5m ./...
+
+# Run all tests
+test-all: test integration-test
 
 # Build binary
 build:
@@ -27,3 +34,4 @@ docker-run: docker-build
 clean:
 	rm -f debug-httpd
 	go clean -cache
+	docker rmi debug-httpd:integration-test 2>/dev/null || true

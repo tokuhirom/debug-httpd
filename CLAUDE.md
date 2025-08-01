@@ -33,8 +33,14 @@ docker run -p 9000:9000 -e PORT=9000 debug-httpd:latest
 
 ### Build and Test Locally
 ```bash
-# Run tests
+# Run unit tests
 make test
+
+# Run integration tests (requires Docker)
+make integration-test
+
+# Run all tests
+make test-all
 
 # Build binary
 make build
@@ -59,9 +65,10 @@ curl http://localhost:9876/logs
 
 - **main.go**: Go HTTP server with /ping, /logs, and debug endpoints
 - **main_test.go**: Comprehensive unit tests
+- **integration_test.go**: Integration tests that build and test the Docker container
 - **Dockerfile**: Multi-stage build creating minimal scratch-based container (≈6.5MB)
 - **Makefile**: Build, test, and run targets
-- **GitHub Actions**: Automated testing, build, and push to ghcr.io on main branch commits
+- **GitHub Actions**: Automated testing (unit + integration), build, and push to ghcr.io on main branch commits
 
 ## Deployment
 
