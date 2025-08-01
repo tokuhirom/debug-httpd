@@ -1,6 +1,6 @@
 # debug-httpd
 
-デバッグ用途の HTTP サーバーです。環境変数やホスト情報を JSON 形式で返却します。
+デバッグ用途の軽量 HTTP サーバーです。Go言語で実装され、環境変数やホスト情報を JSON 形式で返却します。
 
 ![screenshot](screenshot-20250724T181254@2x.png)
 
@@ -12,7 +12,7 @@
 - リクエスト情報（パス、ヘッダー、クライアントアドレス）
 - ホスト情報（ホスト名、FQDN、IPアドレス）
 - 環境変数
-- Python バージョン
+- Go バージョン
 
 ## 使い方
 
@@ -73,16 +73,46 @@ curl -s http://localhost:9876 | jq .
     "PATH": "/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
     "HOSTNAME": "b2c58d189684",
     "PORT": "9876",
-    "PYTHON_VERSION": "3.11.10",
     "HOME": "/root"
   },
-  "python_version": "3.11.10 (main, Oct 16 2024, 02:31:39) [GCC 12.2.0]"
+  "go_version": "go1.21.0"
 }
 ```
 
+## エンドポイント
+
+- `/` - デバッグ情報をJSONで返却
+- `/ping` - ヘルスチェック用エンドポイント（"pong"を返す）
+- `/logs` - 直近100件のアクセスログをJSONで返却
+
+## ビルドとテスト
+
+### ローカルでのビルド
+```bash
+# ユニットテストを実行
+make test
+
+# 統合テスト（Dockerが必要）を実行
+make integration-test
+
+# 全てのテストを実行
+make test-all
+
+# バイナリをビルド
+make build
+
+# 実行
+make run
+```
+
+### Dockerイメージサイズ
+約6.5MB (scratchベース) の超軽量イメージ
+
 ## CI/CD
 
-GitHub Actions により、main ブランチへのプッシュ時に自動的に Docker イメージがビルドされ、GitHub Container Registry (ghcr.io) にプッシュされます。
+GitHub Actions により：
+- プルリクエスト時にテストとビルドを実行
+- main ブランチへのプッシュ時に Docker イメージをビルドし、GitHub Container Registry (ghcr.io) にプッシュ
 
 ## ライセンス
 
