@@ -8,9 +8,11 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -45,7 +47,7 @@ func NewAccessLogger(size int) *AccessLogger {
 func (al *AccessLogger) Add(log AccessLog) {
 	al.mu.Lock()
 	defer al.mu.Unlock()
-	
+
 	al.logs = append(al.logs, log)
 	if len(al.logs) > al.size {
 		al.logs = al.logs[len(al.logs)-al.size:]
@@ -56,7 +58,7 @@ func (al *AccessLogger) Add(log AccessLog) {
 func (al *AccessLogger) GetLogs() []AccessLog {
 	al.mu.RLock()
 	defer al.mu.RUnlock()
-	
+
 	result := make([]AccessLog, len(al.logs))
 	copy(result, al.logs)
 	return result
@@ -68,7 +70,7 @@ var logger = NewAccessLogger(100)
 func logAccess(r *http.Request) {
 	host, portStr, _ := net.SplitHostPort(r.RemoteAddr)
 	port, _ := strconv.Atoi(portStr)
-	
+
 	log := AccessLog{
 		Timestamp:     time.Now().Format(time.RFC3339Nano),
 		Method:        r.Method,
@@ -79,9 +81,9 @@ func logAccess(r *http.Request) {
 		Referer:       r.Header.Get("Referer"),
 		Host:          r.Header.Get("Host"),
 	}
-	
+
 	logger.Add(log)
-	
+
 	// Also log to stdout
 	fmt.Printf("[%s] %s %s from %s\n", log.Timestamp, log.Method, log.Path, r.RemoteAddr)
 }
@@ -89,18 +91,18 @@ func logAccess(r *http.Request) {
 // getIPAddresses returns all IP addresses of the host
 func getIPAddresses() []string {
 	var ips []string
-	
+
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		return ips
 	}
-	
+
 	for _, addr := range addrs {
 		if ipNet, ok := addr.(*net.IPNet); ok {
 			ips = append(ips, ipNet.IP.String())
 		}
 	}
-	
+
 	return ips
 }
 
@@ -117,7 +119,7 @@ func logsHandler(w http.ResponseWriter, r *http.Request) {
 	logAccess(r)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	
+
 	logs := logger.GetLogs()
 	json.NewEncoder(w).Encode(logs)
 }
@@ -125,7 +127,7 @@ func logsHandler(w http.ResponseWriter, r *http.Request) {
 // debugHandler handles all other requests with debug information
 func debugHandler(w http.ResponseWriter, r *http.Request) {
 	logAccess(r)
-	
+
 	// Collect environment variables
 	envVars := make(map[string]string)
 	for _, env := range os.Environ() {
@@ -139,7 +141,7 @@ func debugHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Get host information
 	hostname, _ := os.Hostname()
-	
+
 	// Prepare response
 	response := map[string]interface{}{
 		"timestamp": time.Now().Format(time.RFC3339Nano),
@@ -162,9 +164,9 @@ func debugHandler(w http.ResponseWriter, r *http.Request) {
 			"ip_addresses": getIPAddresses(),
 		},
 		"environment_variables": envVars,
-		"go_version":           runtime.Version(),
+		"go_version":            runtime.Version(),
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
@@ -175,7 +177,7 @@ func main() {
 	var port int
 	flag.IntVar(&port, "port", 0, "Port to listen on")
 	flag.Parse()
-	
+
 	// If port not specified via flag, check environment variable
 	if port == 0 {
 		if envPort := os.Getenv("PORT"); envPort != "" {
@@ -197,18 +199,28 @@ func main() {
 			}
 		}
 	}
-	
+
 	// Set up routes
 	http.HandleFunc("/ping", pingHandler)
 	http.HandleFunc("/logs", logsHandler)
 	http.HandleFunc("/", debugHandler)
-	
+
+	// signal handling for SIGHUP
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGHUP)
+	go func() {
+		for sig := range sigCh {
+			// just logging... and continue running
+			log.Printf("Received signal: %s, continue running", sig)
+		}
+	}()
+
 	// Start server
 	addr := fmt.Sprintf(":%d", port)
 	log.Printf("Debug HTTP server starting on port %d", port)
 	log.Printf("Access at http://localhost:%d", port)
 	log.Println("Press Ctrl-C to stop")
-	
+
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatal(err)
 	}
