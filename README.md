@@ -13,17 +13,17 @@
 
 ## ユースケース
 
-### 🐳 コンテナ環境の検証
-- Kubernetes / Docker Compose のデプロイメント確認
+### コンテナ環境の検証
+- Docker Compose のデプロイメント確認
 - コンテナ間ネットワークの疎通確認
-- ロードバランサーやIngressの動作確認
+- ロードバランサーの動作確認
 
-### 🔍 デバッグとトラブルシューティング
+### デバッグとトラブルシューティング
 - コンテナ内の環境変数やネットワーク設定の確認
 - タイムアウト設定のテスト
 - エラーハンドリングの動作確認
 
-### 📊 アプリケーションテスト
+### アプリケーションテスト
 - ヘルスチェックエンドポイントのモック
 - 遅延やエラーレスポンスのシミュレーション
 - アクセスログの確認
@@ -38,41 +38,6 @@ docker run -p 9876:9876 ghcr.io/tokuhirom/debug-httpd:latest
 
 # アクセスして確認
 curl http://localhost:9876
-```
-
-### Kubernetes で実行
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: debug-httpd
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: debug-httpd
-  template:
-    metadata:
-      labels:
-        app: debug-httpd
-    spec:
-      containers:
-      - name: debug-httpd
-        image: ghcr.io/tokuhirom/debug-httpd:latest
-        ports:
-        - containerPort: 9876
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: debug-httpd
-spec:
-  selector:
-    app: debug-httpd
-  ports:
-  - port: 80
-    targetPort: 9876
 ```
 
 ### ポート設定
@@ -124,7 +89,7 @@ curl http://localhost:9876 | jq .
 ```
 
 **活用シーン:**
-- Kubernetes Podの環境変数確認
+- コンテナの環境変数確認
 - コンテナのIPアドレス確認
 - ネットワーク疎通テスト
 
@@ -141,19 +106,9 @@ curl http://localhost:9876/ping
 ```
 
 **活用シーン:**
-- Kubernetes の liveness / readiness probe
+- コンテナのヘルスチェック
 - ロードバランサーのヘルスチェック
 - 監視システムの死活監視
-
-**Kubernetes 設定例:**
-```yaml
-livenessProbe:
-  httpGet:
-    path: /ping
-    port: 9876
-  initialDelaySeconds: 3
-  periodSeconds: 5
-```
 
 ---
 
@@ -260,20 +215,7 @@ curl -i http://localhost:9876/status?code=503
 
 ## 実用例
 
-### 1. Kubernetes でのデプロイメント確認
-
-```bash
-# デプロイ
-kubectl apply -f deployment.yaml
-
-# Pod情報の確認
-kubectl port-forward deployment/debug-httpd 9876:9876
-
-# 環境変数とIPアドレスの確認
-curl http://localhost:9876 | jq '.host, .environment_variables'
-```
-
-### 2. タイムアウト設定のテスト
+### 1. タイムアウト設定のテスト
 
 ```bash
 # Nginxのproxy_read_timeoutが5秒の場合
@@ -281,7 +223,7 @@ curl http://your-nginx-proxy/sleep?duration=3s  # 成功
 curl http://your-nginx-proxy/sleep?duration=6s  # タイムアウト
 ```
 
-### 3. ロードバランサーのヘルスチェック設定
+### 2. ロードバランサーのヘルスチェック設定
 
 ```bash
 # ヘルスチェックエンドポイントの動作確認
@@ -291,7 +233,7 @@ watch -n 1 'curl -s http://localhost:9876/ping'
 curl http://localhost:9876/status?code=503
 ```
 
-### 4. アクセスログの確認
+### 3. アクセスログの確認
 
 ```bash
 # 複数のリクエストを送信
