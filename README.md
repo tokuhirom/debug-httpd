@@ -85,6 +85,7 @@ curl -s http://localhost:9876 | jq .
 - `/ping` - ヘルスチェック用エンドポイント（"pong"を返す）
 - `/logs` - 直近100件のアクセスログをJSONで返却
 - `/sleep?duration=<time>` - 指定した時間sleepしてからレスポンスを返す（タイムアウトのテスト用）
+- `/status?code=<code>` - 任意のHTTPステータスコードを返す（エラーハンドリングのテスト用）
 
 ### `/sleep` エンドポイント
 
@@ -128,6 +129,45 @@ curl http://localhost:9876/sleep
 # 不正なフォーマット
 curl http://localhost:9876/sleep?duration=invalid
 # => {"error":"invalid duration format: ...","example":"/sleep?duration=1s (supports: ns, us/µs, ms, s, m, h)"}
+```
+
+### `/status` エンドポイント
+
+HTTPステータスコードのテストやエラーハンドリングのデバッグに使用できるエンドポイントです。クエリパラメータ `code` で指定したステータスコードを返します。
+
+**パラメータ:**
+- `code` (必須) - HTTPステータスコード（100-599）
+
+**使用例:**
+```bash
+# 404 Not Foundを返す
+curl http://localhost:9876/status?code=404
+
+# 500 Internal Server Errorを返す
+curl http://localhost:9876/status?code=500
+
+# 200 OKを返す
+curl http://localhost:9876/status?code=200
+```
+
+**レスポンス例:**
+```json
+{
+  "status_code": 404,
+  "message": "Not Found",
+  "timestamp": "2025-12-18T23:18:27.123456789+09:00"
+}
+```
+
+**エラー例:**
+```bash
+# codeパラメータなし
+curl http://localhost:9876/status
+# => {"error":"code parameter is required","example":"/status?code=404"}
+
+# 無効なコード
+curl http://localhost:9876/status?code=999
+# => {"error":"status code must be between 100 and 599"}
 ```
 
 ## ビルドとテスト

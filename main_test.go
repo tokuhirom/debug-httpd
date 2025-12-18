@@ -320,3 +320,136 @@ func TestSleepHandler_InvalidDuration(t *testing.T) {
 		})
 	}
 }
+
+func TestStatusHandler_Success(t *testing.T) {
+	tests := []struct {
+		name               string
+		code               string
+		expectedStatusCode int
+		expectedMessage    string
+	}{
+		{
+			name:               "status 200",
+			code:               "200",
+			expectedStatusCode: 200,
+			expectedMessage:    "OK",
+		},
+		{
+			name:               "status 404",
+			code:               "404",
+			expectedStatusCode: 404,
+			expectedMessage:    "Not Found",
+		},
+		{
+			name:               "status 500",
+			code:               "500",
+			expectedStatusCode: 500,
+			expectedMessage:    "Internal Server Error",
+		},
+		{
+			name:               "status 201",
+			code:               "201",
+			expectedStatusCode: 201,
+			expectedMessage:    "Created",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", "/status?code="+tt.code, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			rr := httptest.NewRecorder()
+			handler := http.HandlerFunc(statusHandler)
+			handler.ServeHTTP(rr, req)
+
+			if status := rr.Code; status != tt.expectedStatusCode {
+				t.Errorf("handler returned wrong status code: got %v want %v",
+					status, tt.expectedStatusCode)
+			}
+
+			var response map[string]interface{}
+			if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
+				t.Errorf("could not parse response: %v", err)
+			}
+
+			// Check response fields
+			if statusCode, ok := response["status_code"].(float64); !ok || int(statusCode) != tt.expectedStatusCode {
+				t.Errorf("unexpected status_code: got %v want %v", response["status_code"], tt.expectedStatusCode)
+			}
+
+			if message, ok := response["message"].(string); !ok || message != tt.expectedMessage {
+				t.Errorf("unexpected message: got %v want %v", response["message"], tt.expectedMessage)
+			}
+
+			if _, ok := response["timestamp"]; !ok {
+				t.Error("response missing timestamp field")
+			}
+		})
+	}
+}
+
+func TestStatusHandler_MissingCode(t *testing.T) {
+	req, err := http.NewRequest("GET", "/status", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(statusHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusBadRequest)
+	}
+
+	var response map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
+		t.Errorf("could not parse response: %v", err)
+	}
+
+	if _, ok := response["error"]; !ok {
+		t.Error("response missing error field")
+	}
+}
+
+func TestStatusHandler_InvalidCode(t *testing.T) {
+	tests := []struct {
+		name string
+		code string
+	}{
+		{"invalid format", "invalid"},
+		{"below range", "99"},
+		{"above range", "600"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", "/status?code="+tt.code, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			rr := httptest.NewRecorder()
+			handler := http.HandlerFunc(statusHandler)
+			handler.ServeHTTP(rr, req)
+
+			if status := rr.Code; status != http.StatusBadRequest {
+				t.Errorf("handler returned wrong status code: got %v want %v",
+					status, http.StatusBadRequest)
+			}
+
+			var response map[string]interface{}
+			if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
+				t.Errorf("could not parse response: %v", err)
+			}
+
+			if _, ok := response["error"]; !ok {
+				t.Error("response missing error field")
+			}
+		})
+	}
+}
