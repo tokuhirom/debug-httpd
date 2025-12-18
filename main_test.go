@@ -181,3 +181,142 @@ func TestGetIPAddresses(t *testing.T) {
 		t.Error("expected to find loopback address")
 	}
 }
+
+func TestSleepHandler_Success(t *testing.T) {
+	tests := []struct {
+		name         string
+		duration     string
+		minSleepTime time.Duration
+		maxSleepTime time.Duration
+	}{
+		{
+			name:         "sleep 100ms",
+			duration:     "100ms",
+			minSleepTime: 90 * time.Millisecond,
+			maxSleepTime: 150 * time.Millisecond,
+		},
+		{
+			name:         "sleep 1s",
+			duration:     "1s",
+			minSleepTime: 900 * time.Millisecond,
+			maxSleepTime: 1200 * time.Millisecond,
+		},
+		{
+			name:         "sleep 500ms",
+			duration:     "500ms",
+			minSleepTime: 450 * time.Millisecond,
+			maxSleepTime: 600 * time.Millisecond,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", "/sleep?duration="+tt.duration, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			rr := httptest.NewRecorder()
+			handler := http.HandlerFunc(sleepHandler)
+
+			start := time.Now()
+			handler.ServeHTTP(rr, req)
+			elapsed := time.Since(start)
+
+			if status := rr.Code; status != http.StatusOK {
+				t.Errorf("handler returned wrong status code: got %v want %v",
+					status, http.StatusOK)
+			}
+
+			// Check that the handler actually slept for approximately the right duration
+			if elapsed < tt.minSleepTime {
+				t.Errorf("handler slept for too short: got %v, want at least %v",
+					elapsed, tt.minSleepTime)
+			}
+			if elapsed > tt.maxSleepTime {
+				t.Errorf("handler slept for too long: got %v, want at most %v",
+					elapsed, tt.maxSleepTime)
+			}
+
+			// Parse response
+			var response map[string]interface{}
+			if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
+				t.Errorf("could not parse response: %v", err)
+			}
+
+			// Check response fields
+			if _, ok := response["slept_duration"]; !ok {
+				t.Error("response missing slept_duration field")
+			}
+			if _, ok := response["actual_duration"]; !ok {
+				t.Error("response missing actual_duration field")
+			}
+			if _, ok := response["timestamp"]; !ok {
+				t.Error("response missing timestamp field")
+			}
+		})
+	}
+}
+
+func TestSleepHandler_MissingDuration(t *testing.T) {
+	req, err := http.NewRequest("GET", "/sleep", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(sleepHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusBadRequest)
+	}
+
+	var response map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
+		t.Errorf("could not parse response: %v", err)
+	}
+
+	if _, ok := response["error"]; !ok {
+		t.Error("response missing error field")
+	}
+}
+
+func TestSleepHandler_InvalidDuration(t *testing.T) {
+	tests := []struct {
+		name     string
+		duration string
+	}{
+		{"invalid format", "invalid"},
+		{"negative duration", "-1s"},
+		{"exceeds max", "2h"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", "/sleep?duration="+tt.duration, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			rr := httptest.NewRecorder()
+			handler := http.HandlerFunc(sleepHandler)
+			handler.ServeHTTP(rr, req)
+
+			if status := rr.Code; status != http.StatusBadRequest {
+				t.Errorf("handler returned wrong status code: got %v want %v",
+					status, http.StatusBadRequest)
+			}
+
+			var response map[string]interface{}
+			if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
+				t.Errorf("could not parse response: %v", err)
+			}
+
+			if _, ok := response["error"]; !ok {
+				t.Error("response missing error field")
+			}
+		})
+	}
+}

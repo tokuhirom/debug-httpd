@@ -124,6 +124,70 @@ func logsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(logs)
 }
 
+// sleepHandler handles /sleep requests with configurable duration
+func sleepHandler(w http.ResponseWriter, r *http.Request) {
+	logAccess(r)
+
+	// Get duration parameter from query string
+	durationStr := r.URL.Query().Get("duration")
+	if durationStr == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "duration parameter is required",
+			"example": "/sleep?duration=1s (supports: ns, us/µs, ms, s, m, h)",
+		})
+		return
+	}
+
+	// Parse duration (supports: ns, us/µs, ms, s, m, h)
+	duration, err := time.ParseDuration(durationStr)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   fmt.Sprintf("invalid duration format: %v", err),
+			"example": "/sleep?duration=1s (supports: ns, us/µs, ms, s, m, h)",
+		})
+		return
+	}
+
+	// Optional: Set a reasonable maximum duration to prevent abuse
+	maxDuration := 1 * time.Hour
+	if duration > maxDuration {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":        "duration exceeds maximum allowed",
+			"max_duration": maxDuration.String(),
+		})
+		return
+	}
+
+	if duration < 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "duration must be positive",
+		})
+		return
+	}
+
+	// Sleep for the specified duration
+	startTime := time.Now()
+	time.Sleep(duration)
+	actualDuration := time.Since(startTime)
+
+	// Return response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"slept_duration":  duration.String(),
+		"actual_duration": actualDuration.String(),
+		"timestamp":       time.Now().Format(time.RFC3339Nano),
+	})
+}
+
 // debugHandler handles all other requests with debug information
 func debugHandler(w http.ResponseWriter, r *http.Request) {
 	logAccess(r)
@@ -203,6 +267,7 @@ func main() {
 	// Set up routes
 	http.HandleFunc("/ping", pingHandler)
 	http.HandleFunc("/logs", logsHandler)
+	http.HandleFunc("/sleep", sleepHandler)
 	http.HandleFunc("/", debugHandler)
 
 	// signal handling for SIGHUP
