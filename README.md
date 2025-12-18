@@ -137,7 +137,6 @@ HTTPステータスコードのテストやエラーハンドリングのデバ�
 
 **パラメータ:**
 - `code` (必須) - HTTPステータスコード（100-599）
-- `message` (オプション) - カスタムメッセージ（省略時は標準のステータステキスト）
 
 **使用例:**
 ```bash
@@ -147,8 +146,8 @@ curl http://localhost:9876/status?code=404
 # 500 Internal Server Errorを返す
 curl http://localhost:9876/status?code=500
 
-# カスタムメッセージ付きで200を返す
-curl "http://localhost:9876/status?code=200&message=Custom%20Success%20Message"
+# 200 OKを返す
+curl http://localhost:9876/status?code=200
 ```
 
 **レスポンス例:**
@@ -156,15 +155,6 @@ curl "http://localhost:9876/status?code=200&message=Custom%20Success%20Message"
 {
   "status_code": 404,
   "message": "Not Found",
-  "timestamp": "2025-12-18T23:18:27.123456789+09:00"
-}
-```
-
-**カスタムメッセージの例:**
-```json
-{
-  "status_code": 200,
-  "message": "Custom Success Message",
   "timestamp": "2025-12-18T23:18:27.123456789+09:00"
 }
 ```

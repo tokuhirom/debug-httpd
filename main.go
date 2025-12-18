@@ -226,13 +226,10 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get optional custom message
-	message := r.URL.Query().Get("message")
+	// Get standard HTTP status text
+	message := http.StatusText(code)
 	if message == "" {
-		message = http.StatusText(code)
-		if message == "" {
-			message = "Unknown Status Code"
-		}
+		message = "Unknown Status Code"
 	}
 
 	// Return response with the specified status code

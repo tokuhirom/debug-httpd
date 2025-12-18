@@ -325,48 +325,38 @@ func TestStatusHandler_Success(t *testing.T) {
 	tests := []struct {
 		name               string
 		code               string
-		message            string
 		expectedStatusCode int
 		expectedMessage    string
 	}{
 		{
 			name:               "status 200",
 			code:               "200",
-			message:            "",
 			expectedStatusCode: 200,
 			expectedMessage:    "OK",
 		},
 		{
 			name:               "status 404",
 			code:               "404",
-			message:            "",
 			expectedStatusCode: 404,
 			expectedMessage:    "Not Found",
 		},
 		{
 			name:               "status 500",
 			code:               "500",
-			message:            "",
 			expectedStatusCode: 500,
 			expectedMessage:    "Internal Server Error",
 		},
 		{
-			name:               "status 201 with custom message",
+			name:               "status 201",
 			code:               "201",
-			message:            "Custom Created Message",
 			expectedStatusCode: 201,
-			expectedMessage:    "Custom Created Message",
+			expectedMessage:    "Created",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			url := "/status?code=" + tt.code
-			if tt.message != "" {
-				url += "&message=" + tt.message
-			}
-
-			req, err := http.NewRequest("GET", url, nil)
+			req, err := http.NewRequest("GET", "/status?code="+tt.code, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
