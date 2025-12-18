@@ -1,114 +1,162 @@
 # debug-httpd
 
-デバッグ用途の軽量 HTTP サーバーです。Go言語で実装され、環境変数やホスト情報を JSON 形式で返却します。
+コンテナ実行環境のデモやデバッグのための軽量HTTPサーバーです。超軽量なDockerイメージで、コンテナの動作確認、ネットワークのテスト、アプリケーションのデバッグに役立ちます。
 
 ![screenshot](screenshot-20250724T181254@2x.png)
 
-## 機能
+## 特徴
 
-このデバッグ用 HTTP サーバーは以下の情報を JSON 形式で返します：
+- **超軽量**: scratchベースの軽量なDockerイメージ
+- **即座に起動**: コンテナの起動確認やヘルスチェックに最適
+- **デバッグ機能**: 環境変数、ネットワーク情報、タイムアウトテストなど
+- **テスト用途**: 任意のHTTPステータスコードや遅延を返すエンドポイント
 
-- タイムスタンプ
-- リクエスト情報（パス、ヘッダー、クライアントアドレス）
-- ホスト情報（ホスト名、FQDN、IPアドレス）
-- 環境変数
-- Go バージョン
+## ユースケース
 
-## 使い方
+### コンテナ環境の検証
+- Docker Compose を使ったデモ
 
-### GitHub Container Registry から実行
+### デバッグとトラブルシューティング
+- コンテナ内の環境変数やネットワーク設定の確認
+- タイムアウト設定のテスト
+- エラーハンドリングの動作確認
+
+### アプリケーションテスト
+- 遅延やエラーレスポンスのシミュレーション
+- アクセスログの確認
+
+## クイックスタート
+
+### Docker で実行
 
 ```bash
-# デフォルトポート（9876）で実行
+# GitHub Container Registry から実行
 docker run -p 9876:9876 ghcr.io/tokuhirom/debug-httpd:latest
 
-# カスタムポートで実行（CMD経由）
-docker run -p 8080:8080 ghcr.io/tokuhirom/debug-httpd:latest 8080
-
-# カスタムポートで実行（環境変数経由）
-docker run -p 8000:8000 -e PORT=8000 ghcr.io/tokuhirom/debug-httpd:latest
-```
-
-### ローカルでビルドして実行
-
-```bash
-# イメージをビルド
-docker build -t debug-httpd:latest .
-
-# コンテナを実行
-docker run -p 9876:9876 debug-httpd:latest
-```
-
-### アクセス方法
-
-```bash
-# サーバーにアクセス
+# アクセスして確認
 curl http://localhost:9876
-
-# jq で整形して表示
-curl -s http://localhost:9876 | jq .
 ```
 
-## レスポンス例
+### ポート設定
 
+```bash
+# 環境変数でポートを指定
+docker run -p 8080:8080 -e PORT=8080 ghcr.io/tokuhirom/debug-httpd:latest
+
+# コマンドライン引数でポートを指定
+docker run -p 8080:8080 ghcr.io/tokuhirom/debug-httpd:latest 8080
+```
+
+## エンドポイント
+
+### `GET /` - 環境情報の取得
+
+コンテナの環境情報を JSON 形式で返します。環境変数、ホスト情報、IPアドレスなどの確認に使用します。
+
+**使用例:**
+```bash
+curl http://localhost:9876 | jq .
+```
+
+**レスポンス例:**
 ```json
 {
-  "timestamp": "2024-01-01T12:00:00.123456",
+  "timestamp": "2025-12-19T00:00:00.123456789+09:00",
   "request": {
     "path": "/",
     "headers": {
       "Host": "localhost:9876",
-      "User-Agent": "curl/7.88.1",
-      "Accept": "*/*"
+      "User-Agent": "curl/8.1.0"
     },
     "client_address": "172.17.0.1",
     "client_port": 54321
   },
   "host": {
-    "hostname": "b2c58d189684",
-    "fqdn": "b2c58d189684",
-    "ip_addresses": ["172.17.0.2", "::1"]
+    "hostname": "debug-httpd-5d8f7b-xwz9k",
+    "fqdn": "debug-httpd-5d8f7b-xwz9k",
+    "ip_addresses": ["10.244.0.15", "::1", "127.0.0.1"]
   },
   "environment_variables": {
-    "PATH": "/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-    "HOSTNAME": "b2c58d189684",
-    "PORT": "9876",
-    "HOME": "/root"
+    "PATH": "/usr/local/bin:/usr/bin:/bin",
+    "HOSTNAME": "debug-httpd-5d8f7b-xwz9k",
+    "KUBERNETES_SERVICE_HOST": "10.96.0.1"
   },
-  "go_version": "go1.21.0"
+  "go_version": "go1.23.0"
 }
 ```
 
-## エンドポイント
+**活用シーン:**
+- コンテナの環境変数確認
+- コンテナのIPアドレス確認
+- ネットワーク疎通テスト
 
-- `/` - デバッグ情報をJSONで返却
-- `/ping` - ヘルスチェック用エンドポイント（"pong"を返す）
-- `/logs` - 直近100件のアクセスログをJSONで返却
-- `/sleep?duration=<time>` - 指定した時間sleepしてからレスポンスを返す（タイムアウトのテスト用）
-- `/status?code=<code>` - 任意のHTTPステータスコードを返す（エラーハンドリングのテスト用）
+---
 
-### `/sleep` エンドポイント
+### `GET /ping` - ヘルスチェック
 
-タイムアウトや遅延のデバッグに使用できるエンドポイントです。クエリパラメータ `duration` で指定した時間sleepしてからレスポンスを返します。
-
-**サポートする時間単位:**
-- `ns` - ナノ秒
-- `us` または `µs` - マイクロ秒
-- `ms` - ミリ秒
-- `s` - 秒
-- `m` - 分
-- `h` - 時（最大1時間）
+シンプルなヘルスチェックエンドポイント。"pong"というテキストを返します。
 
 **使用例:**
 ```bash
-# 1秒sleep
+curl http://localhost:9876/ping
+# => pong
+```
+
+**活用シーン:**
+- 疎通確認
+
+---
+
+### `GET /logs` - アクセスログの取得
+
+直近100件のアクセスログをJSON形式で返します。
+
+**使用例:**
+```bash
+curl http://localhost:9876/logs | jq .
+```
+
+**レスポンス例:**
+```json
+[
+  {
+    "timestamp": "2025-12-19T00:00:00.123456789+09:00",
+    "method": "GET",
+    "path": "/status?code=404",
+    "client_address": "10.244.0.1",
+    "client_port": 45678,
+    "user_agent": "curl/8.1.0",
+    "referer": "",
+    "host": "localhost:9876"
+  }
+]
+```
+
+**活用シーン:**
+- リクエストの履歴確認
+- クライアントIPアドレスの確認
+- デバッグ時のリクエスト追跡
+
+---
+
+### `GET /sleep?duration=<time>` - タイムアウトのテスト
+
+指定した時間sleepしてからレスポンスを返します。タイムアウト設定のテストに使用します。
+
+**パラメータ:**
+- `duration` (必須) - sleep時間（`ns`, `us`, `ms`, `s`, `m`, `h` の単位をサポート、最大1時間）
+
+**使用例:**
+```bash
+# 1秒待機
 curl http://localhost:9876/sleep?duration=1s
 
-# 500ミリ秒sleep
+# 500ミリ秒待機
 curl http://localhost:9876/sleep?duration=500ms
 
-# 2分sleep
-curl http://localhost:9876/sleep?duration=2m
+# 3秒待機してタイムアウトをテスト
+curl --max-time 2 http://localhost:9876/sleep?duration=3s
+# => タイムアウトエラー
 ```
 
 **レスポンス例:**
@@ -116,38 +164,34 @@ curl http://localhost:9876/sleep?duration=2m
 {
   "slept_duration": "1s",
   "actual_duration": "1.000123456s",
-  "timestamp": "2025-12-18T16:24:08.123456789+09:00"
+  "timestamp": "2025-12-19T00:00:01.123456789+09:00"
 }
 ```
 
-**エラー例:**
-```bash
-# durationパラメータなし
-curl http://localhost:9876/sleep
-# => {"error":"duration parameter is required","example":"/sleep?duration=1s (supports: ns, us/µs, ms, s, m, h)"}
+**活用シーン:**
+- リバースプロキシのタイムアウト設定確認
+- アプリケーションのタイムアウトハンドリングテスト
+- 遅いAPIのシミュレーション
 
-# 不正なフォーマット
-curl http://localhost:9876/sleep?duration=invalid
-# => {"error":"invalid duration format: ...","example":"/sleep?duration=1s (supports: ns, us/µs, ms, s, m, h)"}
-```
+---
 
-### `/status` エンドポイント
+### `GET /status?code=<code>` - HTTPステータスコードのテスト
 
-HTTPステータスコードのテストやエラーハンドリングのデバッグに使用できるエンドポイントです。クエリパラメータ `code` で指定したステータスコードを返します。
+任意のHTTPステータスコードを返します。エラーハンドリングのテストに使用します。
 
 **パラメータ:**
 - `code` (必須) - HTTPステータスコード（100-599）
 
 **使用例:**
 ```bash
-# 404 Not Foundを返す
-curl http://localhost:9876/status?code=404
+# 404 Not Found を返す
+curl -i http://localhost:9876/status?code=404
 
-# 500 Internal Server Errorを返す
-curl http://localhost:9876/status?code=500
+# 500 Internal Server Error を返す
+curl -i http://localhost:9876/status?code=500
 
-# 200 OKを返す
-curl http://localhost:9876/status?code=200
+# 503 Service Unavailable を返す（サービス停止のシミュレーション）
+curl -i http://localhost:9876/status?code=503
 ```
 
 **レスポンス例:**
@@ -155,24 +199,49 @@ curl http://localhost:9876/status?code=200
 {
   "status_code": 404,
   "message": "Not Found",
-  "timestamp": "2025-12-18T23:18:27.123456789+09:00"
+  "timestamp": "2025-12-19T00:00:00.123456789+09:00"
 }
 ```
 
-**エラー例:**
-```bash
-# codeパラメータなし
-curl http://localhost:9876/status
-# => {"error":"code parameter is required","example":"/status?code=404"}
+**活用シーン:**
+- エラーハンドリングのテスト
+- リトライロジックの動作確認
+- 監視システムのアラートテスト
 
-# 無効なコード
-curl http://localhost:9876/status?code=999
-# => {"error":"status code must be between 100 and 599"}
+## 実用例
+
+### 1. タイムアウト設定のテスト
+
+```bash
+# Nginxのproxy_read_timeoutが5秒の場合
+curl http://your-nginx-proxy/sleep?duration=3s  # 成功
+curl http://your-nginx-proxy/sleep?duration=6s  # タイムアウト
 ```
 
-## ビルドとテスト
+### 2. ロードバランサーのヘルスチェック設定
 
-### ローカルでのビルド
+```bash
+# ヘルスチェックエンドポイントの動作確認
+watch -n 1 'curl -s http://localhost:9876/ping'
+
+# エラーレスポンスのシミュレーション（ヘルスチェック失敗）
+curl http://localhost:9876/status?code=503
+```
+
+### 3. アクセスログの確認
+
+```bash
+# 複数のリクエストを送信
+for i in {1..5}; do curl http://localhost:9876/status?code=$((200 + i)); done
+
+# ログの確認
+curl http://localhost:9876/logs | jq '.[-5:]'
+```
+
+## ローカル開発
+
+### ビルドとテスト
+
 ```bash
 # ユニットテストを実行
 make test
@@ -183,21 +252,28 @@ make integration-test
 # 全てのテストを実行
 make test-all
 
-# バイナリをビルド
+# ローカルでバイナリをビルドして実行
 make build
-
-# 実行
 make run
 ```
 
-### Dockerイメージサイズ
-約6.5MB (scratchベース) の超軽量イメージ
+### Dockerイメージのビルド
+
+```bash
+# イメージをビルド
+docker build -t debug-httpd:latest .
+
+# ローカルで実行
+docker run -p 9876:9876 debug-httpd:latest
+```
 
 ## CI/CD
 
-GitHub Actions により：
-- プルリクエスト時にテストとビルドを実行
-- main ブランチへのプッシュ時に Docker イメージをビルドし、GitHub Container Registry (ghcr.io) にプッシュ
+GitHub Actions により自動化されています：
+- プルリクエスト時にユニットテストと統合テストを実行
+- main ブランチへのプッシュ時に Docker イメージをビルドし、GitHub Container Registry (ghcr.io) に自動プッシュ
+
+最新のイメージは常に `ghcr.io/tokuhirom/debug-httpd:latest` で利用可能です。
 
 ## ライセンス
 
@@ -207,7 +283,7 @@ The MIT License (MIT)
 Copyright © 2025 Tokuhiro Matsuno, http://64p.org/ <tokuhirom@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
+of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -216,7 +292,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
