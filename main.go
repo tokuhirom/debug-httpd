@@ -188,6 +188,63 @@ func sleepHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// statusHandler handles /status requests with configurable HTTP status code
+func statusHandler(w http.ResponseWriter, r *http.Request) {
+	logAccess(r)
+
+	// Get status code parameter from query string
+	codeStr := r.URL.Query().Get("code")
+	if codeStr == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "code parameter is required",
+			"example": "/status?code=404",
+		})
+		return
+	}
+
+	// Parse status code
+	code, err := strconv.Atoi(codeStr)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   fmt.Sprintf("invalid status code format: %v", err),
+			"example": "/status?code=404",
+		})
+		return
+	}
+
+	// Validate status code range (100-599)
+	if code < 100 || code > 599 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "status code must be between 100 and 599",
+		})
+		return
+	}
+
+	// Get optional custom message
+	message := r.URL.Query().Get("message")
+	if message == "" {
+		message = http.StatusText(code)
+		if message == "" {
+			message = "Unknown Status Code"
+		}
+	}
+
+	// Return response with the specified status code
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status_code": code,
+		"message":     message,
+		"timestamp":   time.Now().Format(time.RFC3339Nano),
+	})
+}
+
 // debugHandler handles all other requests with debug information
 func debugHandler(w http.ResponseWriter, r *http.Request) {
 	logAccess(r)
@@ -268,6 +325,7 @@ func main() {
 	http.HandleFunc("/ping", pingHandler)
 	http.HandleFunc("/logs", logsHandler)
 	http.HandleFunc("/sleep", sleepHandler)
+	http.HandleFunc("/status", statusHandler)
 	http.HandleFunc("/", debugHandler)
 
 	// signal handling for SIGHUP
