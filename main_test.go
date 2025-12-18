@@ -211,7 +211,7 @@ func TestSleepHandler_Success(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, err := http.NewRequest("GET", "/sleep?duration="+tt.duration, nil)
+			req, err := http.NewRequest("GET", "/sleep/"+tt.duration, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -259,7 +259,7 @@ func TestSleepHandler_Success(t *testing.T) {
 }
 
 func TestSleepHandler_MissingDuration(t *testing.T) {
-	req, err := http.NewRequest("GET", "/sleep", nil)
+	req, err := http.NewRequest("GET", "/sleep/", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -295,7 +295,7 @@ func TestSleepHandler_InvalidDuration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, err := http.NewRequest("GET", "/sleep?duration="+tt.duration, nil)
+			req, err := http.NewRequest("GET", "/sleep/"+tt.duration, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -356,7 +356,7 @@ func TestStatusHandler_Success(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, err := http.NewRequest("GET", "/status?code="+tt.code, nil)
+			req, err := http.NewRequest("GET", "/status/"+tt.code, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -392,7 +392,7 @@ func TestStatusHandler_Success(t *testing.T) {
 }
 
 func TestStatusHandler_MissingCode(t *testing.T) {
-	req, err := http.NewRequest("GET", "/status", nil)
+	req, err := http.NewRequest("GET", "/status/", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -428,7 +428,7 @@ func TestStatusHandler_InvalidCode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, err := http.NewRequest("GET", "/status?code="+tt.code, nil)
+			req, err := http.NewRequest("GET", "/status/"+tt.code, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

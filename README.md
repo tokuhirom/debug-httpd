@@ -139,23 +139,23 @@ curl http://localhost:9876/logs | jq .
 
 ---
 
-### `GET /sleep?duration=<time>` - タイムアウトのテスト
+### `GET /sleep/<duration>` - タイムアウトのテスト
 
 指定した時間sleepしてからレスポンスを返します。タイムアウト設定のテストに使用します。
 
 **パラメータ:**
-- `duration` (必須) - sleep時間（`ns`, `us`, `ms`, `s`, `m`, `h` の単位をサポート、最大1時間）
+- `duration` (必須) - パスパラメータとしてsleep時間を指定（`ns`, `us`, `ms`, `s`, `m`, `h` の単位をサポート、最大1時間）
 
 **使用例:**
 ```bash
 # 1秒待機
-curl http://localhost:9876/sleep?duration=1s
+curl http://localhost:9876/sleep/1s
 
 # 500ミリ秒待機
-curl http://localhost:9876/sleep?duration=500ms
+curl http://localhost:9876/sleep/500ms
 
 # 3秒待機してタイムアウトをテスト
-curl --max-time 2 http://localhost:9876/sleep?duration=3s
+curl --max-time 2 http://localhost:9876/sleep/3s
 # => タイムアウトエラー
 ```
 
@@ -175,23 +175,23 @@ curl --max-time 2 http://localhost:9876/sleep?duration=3s
 
 ---
 
-### `GET /status?code=<code>` - HTTPステータスコードのテスト
+### `GET /status/<code>` - HTTPステータスコードのテスト
 
 任意のHTTPステータスコードを返します。エラーハンドリングのテストに使用します。
 
 **パラメータ:**
-- `code` (必須) - HTTPステータスコード（100-599）
+- `code` (必須) - パスパラメータとしてHTTPステータスコードを指定（100-599）
 
 **使用例:**
 ```bash
 # 404 Not Found を返す
-curl -i http://localhost:9876/status?code=404
+curl -i http://localhost:9876/status/404
 
 # 500 Internal Server Error を返す
-curl -i http://localhost:9876/status?code=500
+curl -i http://localhost:9876/status/500
 
 # 503 Service Unavailable を返す（サービス停止のシミュレーション）
-curl -i http://localhost:9876/status?code=503
+curl -i http://localhost:9876/status/503
 ```
 
 **レスポンス例:**
@@ -214,8 +214,8 @@ curl -i http://localhost:9876/status?code=503
 
 ```bash
 # Nginxのproxy_read_timeoutが5秒の場合
-curl http://your-nginx-proxy/sleep?duration=3s  # 成功
-curl http://your-nginx-proxy/sleep?duration=6s  # タイムアウト
+curl http://your-nginx-proxy/sleep/3s  # 成功
+curl http://your-nginx-proxy/sleep/6s  # タイムアウト
 ```
 
 ### 2. ロードバランサーのヘルスチェック設定
@@ -225,14 +225,14 @@ curl http://your-nginx-proxy/sleep?duration=6s  # タイムアウト
 watch -n 1 'curl -s http://localhost:9876/ping'
 
 # エラーレスポンスのシミュレーション（ヘルスチェック失敗）
-curl http://localhost:9876/status?code=503
+curl http://localhost:9876/status/503
 ```
 
 ### 3. アクセスログの確認
 
 ```bash
 # 複数のリクエストを送信
-for i in {1..5}; do curl http://localhost:9876/status?code=$((200 + i)); done
+for i in {1..5}; do curl http://localhost:9876/status/$((200 + i)); done
 
 # ログの確認
 curl http://localhost:9876/logs | jq '.[-5:]'

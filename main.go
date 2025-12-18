@@ -134,18 +134,18 @@ func logsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(logs)
 }
 
-// sleepHandler handles /sleep requests with configurable duration
+// sleepHandler handles /sleep/{duration} requests with configurable duration
 func sleepHandler(w http.ResponseWriter, r *http.Request) {
 	logAccess(r)
 
-	// Get duration parameter from query string
-	durationStr := r.URL.Query().Get("duration")
+	// Get duration parameter from path (e.g., /sleep/3s)
+	durationStr := r.URL.Path[len("/sleep/"):]
 	if durationStr == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"error":   "duration parameter is required",
-			"example": "/sleep?duration=1s (supports: ns, us/µs, ms, s, m, h)",
+			"example": "/sleep/1s (supports: ns, us/µs, ms, s, m, h)",
 		})
 		return
 	}
@@ -157,7 +157,7 @@ func sleepHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"error":   fmt.Sprintf("invalid duration format: %v", err),
-			"example": "/sleep?duration=1s (supports: ns, us/µs, ms, s, m, h)",
+			"example": "/sleep/1s (supports: ns, us/µs, ms, s, m, h)",
 		})
 		return
 	}
@@ -198,18 +198,18 @@ func sleepHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// statusHandler handles /status requests with configurable HTTP status code
+// statusHandler handles /status/{code} requests with configurable HTTP status code
 func statusHandler(w http.ResponseWriter, r *http.Request) {
 	logAccess(r)
 
-	// Get status code parameter from query string
-	codeStr := r.URL.Query().Get("code")
+	// Get status code parameter from path (e.g., /status/404)
+	codeStr := r.URL.Path[len("/status/"):]
 	if codeStr == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"error":   "code parameter is required",
-			"example": "/status?code=404",
+			"example": "/status/404",
 		})
 		return
 	}
@@ -221,7 +221,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"error":   fmt.Sprintf("invalid status code format: %v", err),
-			"example": "/status?code=404",
+			"example": "/status/404",
 		})
 		return
 	}
@@ -331,8 +331,8 @@ func main() {
 	// Set up routes
 	http.HandleFunc("/ping", pingHandler)
 	http.HandleFunc("/logs", logsHandler)
-	http.HandleFunc("/sleep", sleepHandler)
-	http.HandleFunc("/status", statusHandler)
+	http.HandleFunc("/sleep/", sleepHandler)
+	http.HandleFunc("/status/", statusHandler)
 	http.HandleFunc("/", debugHandler)
 
 	// signal handling for SIGHUP
