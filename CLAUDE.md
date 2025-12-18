@@ -78,3 +78,9 @@ To pull the published image:
 ```bash
 docker pull ghcr.io/tokuhirom/debug-httpd:latest
 ```
+
+## Document
+
+- Do not include pictograms
+- Write in Japanese
+
