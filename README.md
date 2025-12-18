@@ -84,6 +84,51 @@ curl -s http://localhost:9876 | jq .
 - `/` - デバッグ情報をJSONで返却
 - `/ping` - ヘルスチェック用エンドポイント（"pong"を返す）
 - `/logs` - 直近100件のアクセスログをJSONで返却
+- `/sleep?duration=<time>` - 指定した時間sleepしてからレスポンスを返す（タイムアウトのテスト用）
+
+### `/sleep` エンドポイント
+
+タイムアウトや遅延のデバッグに使用できるエンドポイントです。クエリパラメータ `duration` で指定した時間sleepしてからレスポンスを返します。
+
+**サポートする時間単位:**
+- `ns` - ナノ秒
+- `us` または `µs` - マイクロ秒
+- `ms` - ミリ秒
+- `s` - 秒
+- `m` - 分
+- `h` - 時（最大1時間）
+
+**使用例:**
+```bash
+# 1秒sleep
+curl http://localhost:9876/sleep?duration=1s
+
+# 500ミリ秒sleep
+curl http://localhost:9876/sleep?duration=500ms
+
+# 2分sleep
+curl http://localhost:9876/sleep?duration=2m
+```
+
+**レスポンス例:**
+```json
+{
+  "slept_duration": "1s",
+  "actual_duration": "1.000123456s",
+  "timestamp": "2025-12-18T16:24:08.123456789+09:00"
+}
+```
+
+**エラー例:**
+```bash
+# durationパラメータなし
+curl http://localhost:9876/sleep
+# => {"error":"duration parameter is required","example":"/sleep?duration=1s (supports: ns, us/µs, ms, s, m, h)"}
+
+# 不正なフォーマット
+curl http://localhost:9876/sleep?duration=invalid
+# => {"error":"invalid duration format: ...","example":"/sleep?duration=1s (supports: ns, us/µs, ms, s, m, h)"}
+```
 
 ## ビルドとテスト
 
