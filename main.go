@@ -71,10 +71,20 @@ func logAccess(r *http.Request) {
 	host, portStr, _ := net.SplitHostPort(r.RemoteAddr)
 	port, _ := strconv.Atoi(portStr)
 
+	// Use RequestURI to include query string
+	// Fall back to constructing from URL if RequestURI is empty (e.g., in tests)
+	requestURI := r.RequestURI
+	if requestURI == "" {
+		requestURI = r.URL.Path
+		if r.URL.RawQuery != "" {
+			requestURI += "?" + r.URL.RawQuery
+		}
+	}
+
 	log := AccessLog{
 		Timestamp:     time.Now().Format(time.RFC3339Nano),
 		Method:        r.Method,
-		Path:          r.URL.Path,
+		Path:          requestURI,
 		ClientAddress: host,
 		ClientPort:    port,
 		UserAgent:     r.Header.Get("User-Agent"),
@@ -85,7 +95,7 @@ func logAccess(r *http.Request) {
 	logger.Add(log)
 
 	// Also log to stdout
-	fmt.Printf("[%s] %s %s from %s\n", log.Timestamp, log.Method, log.Path, r.RemoteAddr)
+	fmt.Printf("[%s] %s %s from %s\n", log.Timestamp, log.Method, requestURI, r.RemoteAddr)
 }
 
 // getIPAddresses returns all IP addresses of the host
