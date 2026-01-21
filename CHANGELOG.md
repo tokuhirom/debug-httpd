@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.0.8](https://github.com/tokuhirom/debug-httpd/compare/v0.0.7...v0.0.8) - 2026-01-21
+- Update actions/checkout action to v6 by @renovate[bot] in https://github.com/tokuhirom/debug-httpd/pull/33
+- Update actions/create-github-app-token action to v2 by @renovate[bot] in https://github.com/tokuhirom/debug-httpd/pull/34
+
 ## [v0.0.7](https://github.com/tokuhirom/debug-httpd/compare/v0.0.6...v0.0.7) - 2026-01-21
 - Add tagpr configuration for automated versioning by @tokuhirom in https://github.com/tokuhirom/debug-httpd/pull/31
 
